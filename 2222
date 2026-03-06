@@ -1,103 +1,76 @@
-const { createCanvas, loadImage, registerFont } = require('canvas');
-const path = require('path');
-
+// 纯 SVG 生成倒计时，零依赖、Vercel 部署必成功
 export default function handler(req, res) {
-    // 1. 设置目标时间 (2026-03-25 08:30 北京时间)
-    const targetDate = new Date('2026-03-25T08:30:00+08:00');
-    const now = new Date();
-    let diff = targetDate - now;
+  // 1. 计算倒计时（北京时间 2026-03-25 08:30）
+  const target = new Date('2026-03-25T08:30:00+08:00').getTime();
+  const now = new Date().getTime();
+  let diff = target - now;
+  diff = diff < 0 ? 0 : diff;
 
-    if (diff < 0) diff = 0;
+  // 计算天/时/分/秒
+  const days = String(Math.floor(diff / (1000 * 60 * 60 * 24))).padStart(2, '0');
+  const hours = String(Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60))).padStart(2, '0');
+  const minutes = String(Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60))).padStart(2, '0');
+  const seconds = String(Math.floor((diff % (1000 * 60)) / 1000)).padStart(2, '0');
 
-    // 2. 计算时间
-    const days = String(Math.floor(diff / (1000 * 60 * 60 * 24))).padStart(2, '0');
-    const hours = String(Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60))).padStart(2, '0');
-    const minutes = String(Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60))).padStart(2, '0');
-    const seconds = String(Math.floor((diff % (1000 * 60)) / 1000)).padStart(2, '0');
+  // 2. 生成 SVG 代码（复刻蓝金风格）
+  const svg = `
+<svg width="800" height="450" xmlns="http://www.w3.org/2000/svg">
+  <!-- 渐变背景 -->
+  <defs>
+    <linearGradient id="bgGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#081728"/>
+      <stop offset="100%" stop-color="#1D4072"/>
+    </linearGradient>
+    <!-- 圆角矩形滤镜（模拟半透明背景） -->
+    <filter id="boxFilter" x="-5%" y="-5%" width="110%" height="110%">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="2" result="blur"/>
+      <feComposite in="SourceGraphic" in2="blur" operator="over"/>
+    </filter>
+  </defs>
 
-    // 3. 创建画布
-    const width = 800;
-    const height = 450;
-    const canvas = createCanvas(width, height);
-    const ctx = canvas.getContext('2d');
+  <!-- 背景填充 -->
+  <rect width="100%" height="100%" fill="url(#bgGradient)" rx="24" ry="24"/>
 
-    // --- 4. 绘制背景 (深蓝渐变) ---
-    const gradient = ctx.createLinearGradient(0, 0, width, height);
-    gradient.addColorStop(0, '#081728');
-    gradient.addColorStop(1, '#1D4072');
-    ctx.fillStyle = gradient;
-    ctx.fillRect(0, 0, width, height);
+  <!-- 标题：埃科光电15周年盛典 -->
+  <text x="400" y="80" font-family="Microsoft YaHei, SimHei, Arial" font-size="36" font-weight="bold" fill="#E6C680" text-anchor="middle">埃科光电15周年盛典</text>
+  
+  <!-- 副标题：VisionChina 2026 -->
+  <text x="400" y="120" font-family="Arial" font-size="20" fill="rgba(255,255,255,0.7)" text-anchor="middle">VisionChina 2026 上海机器视觉展</text>
 
-    // --- 5. 绘制标题 ---
-    ctx.fillStyle = '#E6C680'; // 鎏金色
-    ctx.font = 'bold 36px "Microsoft YaHei", "SimHei", sans-serif';
-    ctx.textAlign = 'center';
-    ctx.fillText('埃科光电15周年盛典', width / 2, 80);
+  <!-- 倒计时方块容器 -->
+  <g transform="translate(100, 160)">
+    <!-- 天 -->
+    <rect x="0" y="0" width="150" height="180" rx="16" ry="16" fill="rgba(255,255,255,0.1)" stroke="rgba(230,198,128,0.3)" stroke-width="2" filter="url(#boxFilter)"/>
+    <text x="75" y="90" font-family="Times New Roman, Arial" font-size="72" font-weight="bold" fill="#E6C680" text-anchor="middle">${days}</text>
+    <text x="75" y="150" font-family="Microsoft YaHei, Arial" font-size="20" fill="#FFFFFF" text-anchor="middle">天</text>
 
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
-    ctx.font = '20px Arial';
-    ctx.fillText('VisionChina 2026 上海机器视觉展', width / 2, 120);
+    <!-- 时 -->
+    <rect x="180" y="0" width="150" height="180" rx="16" ry="16" fill="rgba(255,255,255,0.1)" stroke="rgba(230,198,128,0.3)" stroke-width="2" filter="url(#boxFilter)"/>
+    <text x="255" y="90" font-family="Times New Roman, Arial" font-size="72" font-weight="bold" fill="#E6C680" text-anchor="middle">${hours}</text>
+    <text x="255" y="150" font-family="Microsoft YaHei, Arial" font-size="20" fill="#FFFFFF" text-anchor="middle">时</text>
 
-    // --- 6. 绘制时间方块 ---
-    const boxWidth = 150;
-    const boxHeight = 180;
-    const startX = (width - (boxWidth * 4 + 30 * 3)) / 2;
-    const startY = 160;
-    const units = [days, hours, minutes, seconds];
-    const labels = ['天', '时', '分', '秒'];
+    <!-- 分 -->
+    <rect x="360" y="0" width="150" height="180" rx="16" ry="16" fill="rgba(255,255,255,0.1)" stroke="rgba(230,198,128,0.3)" stroke-width="2" filter="url(#boxFilter)"/>
+    <text x="435" y="90" font-family="Times New Roman, Arial" font-size="72" font-weight="bold" fill="#E6C680" text-anchor="middle">${minutes}</text>
+    <text x="435" y="150" font-family="Microsoft YaHei, Arial" font-size="20" fill="#FFFFFF" text-anchor="middle">分</text>
 
-    units.forEach((val, i) => {
-        const x = startX + i * (boxWidth + 30);
-        
-        // 半透明背景框
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.1)';
-        // 描边
-        ctx.strokeStyle = 'rgba(230, 198, 128, 0.3)';
-        ctx.lineWidth = 2;
-        
-        // 画圆角矩形 (简单模拟)
-        roundRect(ctx, x, startY, boxWidth, boxHeight, 16);
-        ctx.fill();
-        ctx.stroke();
+    <!-- 秒 -->
+    <rect x="540" y="0" width="150" height="180" rx="16" ry="16" fill="rgba(255,255,255,0.1)" stroke="rgba(230,198,128,0.3)" stroke-width="2" filter="url(#boxFilter)"/>
+    <text x="615" y="90" font-family="Times New Roman, Arial" font-size="72" font-weight="bold" fill="#E6C680" text-anchor="middle">${seconds}</text>
+    <text x="615" y="150" font-family="Microsoft YaHei, Arial" font-size="20" fill="#FFFFFF" text-anchor="middle">秒</text>
+  </g>
 
-        // 数字
-        ctx.fillStyle = '#E6C680';
-        ctx.font = 'bold 72px "Times New Roman", serif';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText(val, x + boxWidth/2, startY + 70);
+  <!-- 底部文字：距开幕时间 -->
+  <text x="400" y="400" font-family="Microsoft YaHei, Arial" font-size="18" fill="#FFFFFF" text-anchor="middle">距 2026年3月25日 8:30 开幕</text>
+</svg>
+  `.trim();
 
-        // 标签
-        ctx.fillStyle = '#FFFFFF';
-        ctx.font = '20px "Microsoft YaHei", sans-serif';
-        ctx.fillText(labels[i], x + boxWidth/2, startY + 140);
-    });
-
-    // --- 7. 底部文字 ---
-    ctx.textBaseline = 'alphabetic';
-    ctx.fillStyle = '#FFFFFF';
-    ctx.font = '18px Arial';
-    ctx.fillText('距 2026年3月25日 8:30 开幕', width / 2, 400);
-
-    // 8. 输出图片
-    res.setHeader('Content-Type', 'image/png');
-    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
-    res.setHeader('Pragma', 'no-cache');
-    res.setHeader('Expires', '0');
-    canvas.createPNGStream().pipe(res);
-}
-
-// 辅助函数：画圆角矩形
-function roundRect(ctx, x, y, width, height, radius) {
-  ctx.beginPath();
-  ctx.moveTo(x + radius, y);
-  ctx.lineTo(x + width - radius, y);
-  ctx.quadraticCurveTo(x + width, y, x + width, y + radius);
-  ctx.lineTo(x + width, y + height - radius);
-  ctx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
-  ctx.lineTo(x + radius, y + height);
-  ctx.quadraticCurveTo(x, y + height, x, y + height - radius);
-  ctx.lineTo(x, y + radius);
-  ctx.quadraticCurveTo(x, y, x + radius, y);
-  ctx.closePath();
+  // 3. 设置响应头（禁止缓存 + SVG格式）
+  res.setHeader('Content-Type', 'image/svg+xml');
+  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate, max-age=0');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
+  
+  // 4. 返回SVG内容
+  res.status(200).send(svg);
 }
