@@ -1,0 +1,103 @@
+const { createCanvas, loadImage, registerFont } = require('canvas');
+const path = require('path');
+
+export default function handler(req, res) {
+    // 1. 设置目标时间 (2026-03-25 08:30 北京时间)
+    const targetDate = new Date('2026-03-25T08:30:00+08:00');
+    const now = new Date();
+    let diff = targetDate - now;
+
+    if (diff < 0) diff = 0;
+
+    // 2. 计算时间
+    const days = String(Math.floor(diff / (1000 * 60 * 60 * 24))).padStart(2, '0');
+    const hours = String(Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60))).padStart(2, '0');
+    const minutes = String(Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60))).padStart(2, '0');
+    const seconds = String(Math.floor((diff % (1000 * 60)) / 1000)).padStart(2, '0');
+
+    // 3. 创建画布
+    const width = 800;
+    const height = 450;
+    const canvas = createCanvas(width, height);
+    const ctx = canvas.getContext('2d');
+
+    // --- 4. 绘制背景 (深蓝渐变) ---
+    const gradient = ctx.createLinearGradient(0, 0, width, height);
+    gradient.addColorStop(0, '#081728');
+    gradient.addColorStop(1, '#1D4072');
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, width, height);
+
+    // --- 5. 绘制标题 ---
+    ctx.fillStyle = '#E6C680'; // 鎏金色
+    ctx.font = 'bold 36px "Microsoft YaHei", "SimHei", sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('埃科光电15周年盛典', width / 2, 80);
+
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+    ctx.font = '20px Arial';
+    ctx.fillText('VisionChina 2026 上海机器视觉展', width / 2, 120);
+
+    // --- 6. 绘制时间方块 ---
+    const boxWidth = 150;
+    const boxHeight = 180;
+    const startX = (width - (boxWidth * 4 + 30 * 3)) / 2;
+    const startY = 160;
+    const units = [days, hours, minutes, seconds];
+    const labels = ['天', '时', '分', '秒'];
+
+    units.forEach((val, i) => {
+        const x = startX + i * (boxWidth + 30);
+        
+        // 半透明背景框
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.1)';
+        // 描边
+        ctx.strokeStyle = 'rgba(230, 198, 128, 0.3)';
+        ctx.lineWidth = 2;
+        
+        // 画圆角矩形 (简单模拟)
+        roundRect(ctx, x, startY, boxWidth, boxHeight, 16);
+        ctx.fill();
+        ctx.stroke();
+
+        // 数字
+        ctx.fillStyle = '#E6C680';
+        ctx.font = 'bold 72px "Times New Roman", serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(val, x + boxWidth/2, startY + 70);
+
+        // 标签
+        ctx.fillStyle = '#FFFFFF';
+        ctx.font = '20px "Microsoft YaHei", sans-serif';
+        ctx.fillText(labels[i], x + boxWidth/2, startY + 140);
+    });
+
+    // --- 7. 底部文字 ---
+    ctx.textBaseline = 'alphabetic';
+    ctx.fillStyle = '#FFFFFF';
+    ctx.font = '18px Arial';
+    ctx.fillText('距 2026年3月25日 8:30 开幕', width / 2, 400);
+
+    // 8. 输出图片
+    res.setHeader('Content-Type', 'image/png');
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+    canvas.createPNGStream().pipe(res);
+}
+
+// 辅助函数：画圆角矩形
+function roundRect(ctx, x, y, width, height, radius) {
+  ctx.beginPath();
+  ctx.moveTo(x + radius, y);
+  ctx.lineTo(x + width - radius, y);
+  ctx.quadraticCurveTo(x + width, y, x + width, y + radius);
+  ctx.lineTo(x + width, y + height - radius);
+  ctx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
+  ctx.lineTo(x + radius, y + height);
+  ctx.quadraticCurveTo(x, y + height, x, y + height - radius);
+  ctx.lineTo(x, y + radius);
+  ctx.quadraticCurveTo(x, y, x + radius, y);
+  ctx.closePath();
+}
